@@ -1,42 +1,76 @@
-# Gnome Search Scripts
-A GNOME Shell extension that allows you to execute scripts directly from the GNOME Shell search overview. This extension is perfect for users who frequently run scripts and want quick access to them.
-Features
+# GNOME Search Scripts
 
-    Run executable scripts from a specified directory.
-    Display script names, descriptions, and icons in search results.
-    Easy integration with GNOME Shell's search provider interface.
+A GNOME Shell extension that allows you to execute scripts directly from the GNOME Shell search overview. This extension is perfect for users who frequently run scripts and want quick access to them.
+
+## Features
+
+- Run executable scripts from a customizable directory
+- Display script names, descriptions, and icons in search results
+- Configure notifications for script execution (status, output, or silent)
+- Customize the default icon for scripts
+- File monitoring to automatically detect script changes
+- Easy integration with GNOME Shell's search provider interface
 
 ## Installation
 
-1. Clone the Repository
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/LucasRoesler/gnome-search-scripts.git
+   cd gnome-search-scripts
+   ```
 
-2. Place the Extension in the Correct Directory
+2. **Install the Extension**
+   Place the extension in your GNOME Shell extensions directory:
+   ```bash
+   cp -r gnome-search-scripts@example.com ~/.local/share/gnome-shell/extensions/
+   ```
 
-    Move the my-script-runner@example.com directory to your GNOME Shell extensions directory:
-    ```bash
-    mv my-script-runner@example.com ~/.local/share/gnome-shell/extensions/
-    ```
+3. **Enable the Extension**
+   Restart GNOME Shell:
+   - On X11: Press Alt+F2, type 'r', press Enter
+   - On Wayland: Log out and log back in
 
-3. Enable the Extension
+   Then enable the extension using GNOME Extensions app or run:
+   ```bash
+   gnome-extensions enable gnome-search-scripts@example.com
+   ```
 
-    Restart GNOME Shell by pressing Alt+F2, typing r, and pressing Enter. Then, enable the extension using the GNOME Tweaks tool or the following command:
-
-    ```bash
-    gnome-extensions enable my-script-runner@example.com
-    ```
+**Compatibility:** This extension is designed for GNOME Shell 45 and later.
 
 ## Usage
 
-1. Put your executable scripts in the ~/.config/gnome-search-scripts/ directory. Ensure each script has a shebang (#!/bin/bash) and structured comments for metadata:
+1. **Script Location**
+   By default, scripts are stored in `~/.config/gnome-search-scripts/`. You can change this location in the extension preferences.
 
-    ```bash
-    #!/bin/bash
-    # Name: My Script
-    # Description: This script does something useful.
-    # Icon: utilities-terminal
+2. **Script Format**
+   Create executable scripts with a shebang and metadata comments:
 
-    echo "Hello, GNOME Shell!"
-    ```
-2. Search and Run
+   ```bash
+   #!/bin/bash
+   # Name: My Script
+   # Description: This script does something useful
+   # Icon: utilities-terminal-symbolic
+   # Notify: stdout
 
-    Open the Activities overview and start typing the name of your script. It should appear in the search results with its name, description, and icon. Click on it to run the script.
+   echo "Hello, GNOME Shell!"
+   ```
+
+   **Metadata Options:**
+   - `Name`: The display name in search results (required)
+   - `Description`: A brief explanation of what the script does
+   - `Icon`: The icon name to display (uses GNOME icon names)
+   - `Notify`: How to notify after execution (status, stdout, or none)
+
+3. **Notification Types**
+   - `status`: Shows success/failure with exit code (default)
+   - `stdout`: Shows the script's output in the notification
+   - `none`: No notifications
+
+4. **Running Scripts**
+   Open the Activities overview and start typing the name of your script. It will appear in the search results with its name, description, and icon. Click on it to run the script.
+
+5. **Preferences**
+   Access the extension preferences through the GNOME Extensions app or run:
+   ```bash
+   gnome-extensions prefs gnome-search-scripts@example.com
+   ```
