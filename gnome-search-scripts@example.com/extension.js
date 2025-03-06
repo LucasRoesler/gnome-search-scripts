@@ -13,7 +13,86 @@ class ScriptProvider {
     constructor(extension) {
         this._extension = extension;
         this._scripts = [];
+        this._monitor = null;
+        this._monitorChangedId = 0;
+        this._reloadScriptsTimeoutId = 0;
         this._loadScripts();
+        this._setupMonitor();
+    }
+
+    _setupMonitor() {
+        const scriptDir = GLib.get_home_dir() + scriptLocation;
+
+        // Create the directory if it doesn't exist
+        try {
+            const directory = Gio.File.new_for_path(scriptDir);
+            if (!directory.query_exists(null)) {
+                directory.make_directory_with_parents(null);
+            }
+        } catch (e) {
+            console.error(`Failed to create scripts directory: ${e}`);
+        }
+
+        // Set up file monitoring
+        try {
+            const file = Gio.File.new_for_path(scriptDir);
+            this._monitor = file.monitor_directory(
+                Gio.FileMonitorFlags.NONE,
+                null
+            );
+
+            this._monitorChangedId = this._monitor.connect(
+                'changed',
+                this._onScriptDirectoryChanged.bind(this)
+            );
+        } catch (e) {
+            console.error(`Failed to set up directory monitoring: ${e}`);
+        }
+    }
+
+    _onScriptDirectoryChanged(monitor, file, otherFile, eventType) {
+        // React to relevant file events
+        if (eventType === Gio.FileMonitorEvent.CREATED ||
+            eventType === Gio.FileMonitorEvent.DELETED ||
+            eventType === Gio.FileMonitorEvent.CHANGED) {
+
+            // Debounce rapid changes with a timeout
+            if (this._reloadScriptsTimeoutId) {
+                GLib.source_remove(this._reloadScriptsTimeoutId);
+            }
+
+            this._reloadScriptsTimeoutId = GLib.timeout_add(
+                GLib.PRIORITY_DEFAULT,
+                500, // 500ms delay
+                () => {
+                    console.log('Reloading scripts due to directory changes');
+                    // Reload all scripts
+                    this._scripts = [];
+                    this._loadScripts();
+                    this._reloadScriptsTimeoutId = 0;
+                    return GLib.SOURCE_REMOVE;
+                }
+            );
+        }
+    }
+
+    destroy() {
+        // Clean up monitor
+        if (this._monitorChangedId && this._monitor) {
+            this._monitor.disconnect(this._monitorChangedId);
+            this._monitorChangedId = 0;
+        }
+
+        if (this._monitor) {
+            this._monitor.cancel();
+            this._monitor = null;
+        }
+
+        // Clean up timeout
+        if (this._reloadScriptsTimeoutId) {
+            GLib.source_remove(this._reloadScriptsTimeoutId);
+            this._reloadScriptsTimeoutId = 0;
+        }
     }
 
     // Required properties for GNOME 45+ search providers
@@ -187,6 +266,11 @@ export default class ScriptSearchExtension extends Extension {
     disable() {
         // Use the modern API for GNOME 45+
         Main.overview.searchController.removeProvider(this._scriptProvider);
-        this._scriptProvider = null;
+
+        // Clean up resources
+        if (this._scriptProvider) {
+            this._scriptProvider.destroy();
+            this._scriptProvider = null;
+        }
     }
 }
