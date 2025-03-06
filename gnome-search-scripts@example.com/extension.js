@@ -4,28 +4,74 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 
-import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const scriptLocation = '/.config/gnome-search-scripts/';
+// Settings keys
+const SCRIPT_LOCATION_KEY = 'script-location';
+const DEFAULT_ICON_KEY = 'default-icon';
 
 class ScriptProvider {
-    constructor(extension) {
+    constructor(extension, settings) {
         this._extension = extension;
+        this._settings = settings;
         this._scripts = [];
         this._monitor = null;
         this._monitorChangedId = 0;
         this._reloadScriptsTimeoutId = 0;
+        this._scriptLocation = this._expandPath(this._settings.get_string(SCRIPT_LOCATION_KEY));
+        this._defaultIcon = this._settings.get_string(DEFAULT_ICON_KEY);
         this._loadScripts();
         this._setupMonitor();
     }
 
-    _setupMonitor() {
-        const scriptDir = GLib.get_home_dir() + scriptLocation;
+    // Expand ~ to home directory
+    _expandPath(path) {
+        if (path.startsWith('~')) {
+            return GLib.get_home_dir() + path.substring(1);
+        }
+        return path;
+    }
 
+    // Update script location when settings change
+    updateScriptLocation() {
+        const newLocation = this._expandPath(this._settings.get_string(SCRIPT_LOCATION_KEY));
+
+        // Only update if the location has changed
+        if (newLocation !== this._scriptLocation) {
+            console.log(`Updating script location from ${this._scriptLocation} to ${newLocation}`);
+
+            // Clean up old monitor
+            if (this._monitor) {
+                if (this._monitorChangedId) {
+                    this._monitor.disconnect(this._monitorChangedId);
+                    this._monitorChangedId = 0;
+                }
+                this._monitor.cancel();
+                this._monitor = null;
+            }
+
+            // Update location and reload
+            this._scriptLocation = newLocation;
+            this._scripts = [];
+            this._loadScripts();
+            this._setupMonitor();
+        }
+    }
+
+    // Update default icon when settings change
+    updateDefaultIcon() {
+        this._defaultIcon = this._settings.get_string(DEFAULT_ICON_KEY);
+
+        // Reload scripts to update icons
+        this._scripts = [];
+        this._loadScripts();
+    }
+
+    _setupMonitor() {
         // Create the directory if it doesn't exist
         try {
-            const directory = Gio.File.new_for_path(scriptDir);
+            const directory = Gio.File.new_for_path(this._scriptLocation);
             if (!directory.query_exists(null)) {
                 directory.make_directory_with_parents(null);
             }
@@ -35,7 +81,7 @@ class ScriptProvider {
 
         // Set up file monitoring
         try {
-            const file = Gio.File.new_for_path(scriptDir);
+            const file = Gio.File.new_for_path(this._scriptLocation);
             this._monitor = file.monitor_directory(
                 Gio.FileMonitorFlags.NONE,
                 null
@@ -109,21 +155,20 @@ class ScriptProvider {
     }
 
     _loadScripts() {
-        let scriptDir = GLib.get_home_dir() + scriptLocation;
-        let dir = GLib.Dir.open(scriptDir, 0);
+        let dir = GLib.Dir.open(this._scriptLocation, 0);
         if (!dir) return;
 
         let file;
         while ((file = dir.read_name()) !== null) {
             if (file.endsWith('.sh')) {
-                let scriptPath = scriptDir + file;
+                let scriptPath = this._scriptLocation + '/' + file;
                 let metadata = this._parseScriptMetadata(scriptPath);
                 if (metadata) {
                     this._scripts.push({
                         file: file,
                         name: metadata.name || file,
                         description: metadata.description || '',
-                        icon: metadata.icon || 'system-run-symbolic'
+                        icon: metadata.icon || this._defaultIcon
                     });
                 }
             }
@@ -221,14 +266,14 @@ class ScriptProvider {
     // Updated to match GNOME 45+ API
     activateResult(resultId, terms) {
         let script = this._scripts[parseInt(resultId)];
-        let scriptPath = GLib.get_home_dir() + scriptLocation + script.file;
+        let scriptPath = this._scriptLocation + '/' + script.file;
 
         // Use Gio.SubprocessLauncher to run the script
         let launcher = new Gio.SubprocessLauncher({
             flags: Gio.SubprocessFlags.NONE
         });
 
-        launcher.set_cwd(GLib.get_home_dir() + scriptLocation);
+        launcher.set_cwd(this._scriptLocation);
 
         try {
             // Use spawnv instead of spawn_async
@@ -256,21 +301,51 @@ class ScriptProvider {
 }
 
 export default class ScriptSearchExtension extends Extension {
-    enable() {
-        this._scriptProvider = new ScriptProvider(this);
+    constructor(metadata) {
+        super(metadata);
+        this._settings = null;
+        this._settingsChangedIds = [];
+    }
 
-        // Use the modern API for GNOME 45+
+    enable() {
+        // Load settings (uses the settings-schema from metadata.json)
+        this._settings = this.getSettings();
+
+        // Initialize the provider with the settings
+        this._scriptProvider = new ScriptProvider(this, this._settings);
+
+        // Connect to settings changes
+        this._settingsChangedIds.push(
+            this._settings.connect(`changed::${SCRIPT_LOCATION_KEY}`,
+                () => this._scriptProvider.updateScriptLocation())
+        );
+        this._settingsChangedIds.push(
+            this._settings.connect(`changed::${DEFAULT_ICON_KEY}`,
+                () => this._scriptProvider.updateDefaultIcon())
+        );
+
+        // Register the provider
         Main.overview.searchController.addProvider(this._scriptProvider);
     }
 
     disable() {
-        // Use the modern API for GNOME 45+
+        // Unregister the provider
         Main.overview.searchController.removeProvider(this._scriptProvider);
 
-        // Clean up resources
+        // Disconnect settings signals
+        this._settingsChangedIds.forEach(id => {
+            if (this._settings) {
+                this._settings.disconnect(id);
+            }
+        });
+        this._settingsChangedIds = [];
+
+        // Clean up the provider
         if (this._scriptProvider) {
             this._scriptProvider.destroy();
             this._scriptProvider = null;
         }
+
+        this._settings = null;
     }
 }

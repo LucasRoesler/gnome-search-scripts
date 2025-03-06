@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.gnome-search-scripts" path="/org/gnome/shell/extensions/gnome-search-scripts/">
+    <key name="script-location" type="s">
+      <default>'~/.config/gnome-search-scripts'</default>
+      <summary>Script directory location</summary>
+      <description>Directory where scripts are stored</description>
+    </key>
+    <key name="default-icon" type="s">
+      <default>'system-run-symbolic'</default>
+      <summary>Default script icon</summary>
+      <description>Icon used for scripts without a specified icon</description>
+    </key>
+  </schema>
+</schemalist>
