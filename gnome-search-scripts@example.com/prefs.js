@@ -10,6 +10,7 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 // Settings keys
 const SCRIPT_LOCATION_KEY = 'script-location';
 const DEFAULT_ICON_KEY = 'default-icon';
+const DEFAULT_NOTIFICATION_STYLE_KEY = 'default-notification-style';
 
 export default class ScriptSearchPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -132,6 +133,38 @@ export default class ScriptSearchPreferences extends ExtensionPreferences {
             text: settings.get_string(DEFAULT_ICON_KEY)
         });
 
+        // Create a preferences group for notification settings
+        const notifyGroup = new Adw.PreferencesGroup({
+            title: _('Notification Settings'),
+            description: _('Configure how scripts notify by default')
+        });
+        page.add(notifyGroup);
+
+        // Create a combo row for the default notification style
+        const notifyRow = new Adw.ComboRow({
+            title: _('Default Notification Style'),
+            subtitle: _('How scripts notify when not specified')
+        });
+
+        // Set up the model with notification style options
+        const notifyModel = new Gtk.StringList();
+        notifyModel.append(_('Status (Success/Failure)'));
+        notifyModel.append(_('Script Output'));
+        notifyModel.append(_('No Notification'));
+        notifyRow.model = notifyModel;
+
+        // Map combo positions to values
+        const notifyMap = ['status', 'stdout', 'none'];
+        const currentNotify = settings.get_string(DEFAULT_NOTIFICATION_STYLE_KEY);
+        notifyRow.selected = notifyMap.indexOf(currentNotify);
+
+        // Connect to changes
+        notifyRow.connect('notify::selected', () => {
+            settings.set_string(DEFAULT_NOTIFICATION_STYLE_KEY, notifyMap[notifyRow.selected]);
+        });
+
+        notifyGroup.add(notifyRow);
+
         // Connect the entry to settings
         iconRow.connect('changed', () => {
             settings.set_string(DEFAULT_ICON_KEY, iconRow.get_text());
@@ -181,6 +214,7 @@ export default class ScriptSearchPreferences extends ExtensionPreferences {
 # Name: My Script
 # Description: This script does something useful
 # Icon: utilities-terminal-symbolic
+# Notify: stdout
 
 echo "Hello, GNOME Shell!"`
             ),
@@ -193,6 +227,64 @@ echo "Hello, GNOME Shell!"`
         exampleLabel.add_css_class('monospace');
         formatRow.add_row(exampleLabel);
         scriptFormatGroup.add(formatRow);
+
+        // Add notification information
+        const notifyHelpGroup = new Adw.PreferencesGroup({
+            title: _('Notification Options'),
+            description: _('Available notification styles for scripts')
+        });
+        helpPage.add(notifyHelpGroup);
+
+        // Add an expander row for status notifications
+        const statusRow = new Adw.ExpanderRow({
+            title: _('Status Notifications'),
+            subtitle: _('Default: Shows success or failure with exit code')
+        });
+        const statusLabel = new Gtk.Label({
+            label: _('Add "# Notify: status" to your script to show a simple success/failure notification when the script completes.'),
+            wrap: true,
+            xalign: 0,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+        statusRow.add_row(statusLabel);
+        notifyHelpGroup.add(statusRow);
+
+        // Add an expander row for stdout notifications
+        const stdoutRow = new Adw.ExpanderRow({
+            title: _('Output Notifications'),
+            subtitle: _('Shows the script\'s output in the notification')
+        });
+        const stdoutLabel = new Gtk.Label({
+            label: _('Add "# Notify: stdout" to your script to show the script\'s output in the notification. If the script fails and has no output, the error message will be shown instead.'),
+            wrap: true,
+            xalign: 0,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+        stdoutRow.add_row(stdoutLabel);
+        notifyHelpGroup.add(stdoutRow);
+
+        // Add an expander row for no notifications
+        const noneRow = new Adw.ExpanderRow({
+            title: _('No Notifications'),
+            subtitle: _('Runs silently without any notifications')
+        });
+        const noneLabel = new Gtk.Label({
+            label: _('Add "# Notify: none" to your script to run it silently without showing any notifications.'),
+            wrap: true,
+            xalign: 0,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+        noneRow.add_row(noneLabel);
+        notifyHelpGroup.add(noneRow);
 
         // Add usage information
         const usageGroup = new Adw.PreferencesGroup({

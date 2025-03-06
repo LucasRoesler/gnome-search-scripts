@@ -6,10 +6,12 @@ import Shell from 'gi://Shell';
 
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 // Settings keys
 const SCRIPT_LOCATION_KEY = 'script-location';
 const DEFAULT_ICON_KEY = 'default-icon';
+const DEFAULT_NOTIFICATION_STYLE_KEY = 'default-notification-style';
 
 class ScriptProvider {
     constructor(extension, settings) {
@@ -19,8 +21,10 @@ class ScriptProvider {
         this._monitor = null;
         this._monitorChangedId = 0;
         this._reloadScriptsTimeoutId = 0;
+        this._notificationSource = null;
         this._scriptLocation = this._expandPath(this._settings.get_string(SCRIPT_LOCATION_KEY));
         this._defaultIcon = this._settings.get_string(DEFAULT_ICON_KEY);
+        this._defaultNotificationStyle = this._settings.get_string(DEFAULT_NOTIFICATION_STYLE_KEY);
         this._loadScripts();
         this._setupMonitor();
     }
@@ -64,6 +68,15 @@ class ScriptProvider {
         this._defaultIcon = this._settings.get_string(DEFAULT_ICON_KEY);
 
         // Reload scripts to update icons
+        this._scripts = [];
+        this._loadScripts();
+    }
+
+    // Update default notification style when settings change
+    updateDefaultNotificationStyle() {
+        this._defaultNotificationStyle = this._settings.get_string(DEFAULT_NOTIFICATION_STYLE_KEY);
+
+        // Reload scripts to update notification styles
         this._scripts = [];
         this._loadScripts();
     }
@@ -139,6 +152,39 @@ class ScriptProvider {
             GLib.source_remove(this._reloadScriptsTimeoutId);
             this._reloadScriptsTimeoutId = 0;
         }
+
+        // Clean up notification source
+        this._notificationSource = null;
+    }
+
+    // Show a notification with the given title, body, and success status
+    _showNotification(title, body, success) {
+        // Use different icons for success/failure
+        const iconName = success ? 'emblem-ok-symbolic' : 'dialog-warning-symbolic';
+
+        // Create notification source if needed
+        if (!this._notificationSource) {
+            this._notificationSource = new MessageTray.Source({
+                title: _('Script Runner'),
+                iconName: 'system-run-symbolic'
+            });
+
+            this._notificationSource.connect('destroy', () => {
+                this._notificationSource = null;
+            });
+
+            Main.messageTray.add(this._notificationSource);
+        }
+
+        // Create and show notification
+        const notification = new MessageTray.Notification({
+            source: this._notificationSource,
+            title: title,
+            body: body,
+            iconName: iconName
+        });
+
+        this._notificationSource.addNotification(notification);
     }
 
     // Required properties for GNOME 45+ search providers
@@ -168,7 +214,8 @@ class ScriptProvider {
                         file: file,
                         name: metadata.name || file,
                         description: metadata.description || '',
-                        icon: metadata.icon || this._defaultIcon
+                        icon: metadata.icon || this._defaultIcon,
+                        notify: metadata.notify || this._defaultNotificationStyle
                     });
                 }
             }
@@ -192,6 +239,12 @@ class ScriptProvider {
             } else {
                 break;
             }
+        }
+
+        // Validate notify value
+        if (metadata.notify && !['status', 'stdout', 'none'].includes(metadata.notify)) {
+            console.warn(`Invalid notify value "${metadata.notify}" in ${scriptPath}, using default`);
+            metadata.notify = this._defaultNotificationStyle;
         }
 
         return metadata;
@@ -263,32 +316,86 @@ class ScriptProvider {
         });
     }
 
-    // Updated to match GNOME 45+ API
+    // Updated to match GNOME 45+ API and handle notifications
     activateResult(resultId, terms) {
         let script = this._scripts[parseInt(resultId)];
         let scriptPath = this._scriptLocation + '/' + script.file;
+        let notifyType = script.notify;
 
-        // Use Gio.SubprocessLauncher to run the script
-        let launcher = new Gio.SubprocessLauncher({
-            flags: Gio.SubprocessFlags.NONE
+        // Configure subprocess launcher with appropriate flags
+        let flags = Gio.SubprocessFlags.NONE;
+
+        // Capture stdout if needed for notification
+        if (notifyType === 'stdout') {
+            flags |= Gio.SubprocessFlags.STDOUT_PIPE;
+        }
+
+        // Always capture stderr for error reporting
+        flags |= Gio.SubprocessFlags.STDERR_PIPE;
+
+        const launcher = new Gio.SubprocessLauncher({
+            flags: flags
         });
 
         launcher.set_cwd(this._scriptLocation);
 
         try {
-            // Use spawnv instead of spawn_async
-            let proc = launcher.spawnv([scriptPath]);
+            const proc = launcher.spawnv([scriptPath]);
 
-            // Optional: Wait for the process to complete
-            proc.wait_check_async(null, (proc, result) => {
-                try {
-                    proc.wait_check_finish(result);
-                } catch (e) {
-                    console.error(`Script execution failed: ${e}`);
-                }
-            });
+            if (notifyType === 'none') {
+                // No notification needed, but still wait for completion to catch errors
+                proc.wait_check_async(null, (proc, result) => {
+                    try {
+                        proc.wait_check_finish(result);
+                    } catch (e) {
+                        console.error(`Script execution failed: ${e.message}`);
+                    }
+                });
+            } else if (notifyType === 'stdout') {
+                // Capture output and show notification
+                proc.communicate_utf8_async(null, null, (proc, result) => {
+                    try {
+                        const [, stdout, stderr] = proc.communicate_utf8_finish(result);
+                        const success = proc.get_exit_status() === 0;
+
+                        // Use stdout for notification, or stderr if stdout is empty and there was an error
+                        const output = stdout || (stderr && !success ? stderr : '');
+
+                        if (output) {
+                            this._showNotification(script.name, output, success);
+                        } else if (!success) {
+                            this._showNotification(
+                                script.name,
+                                _("Failed with exit code %d").format(proc.get_exit_status()),
+                                false
+                            );
+                        } else {
+                            this._showNotification(script.name, _("Script executed successfully"), true);
+                        }
+                    } catch (e) {
+                        this._showNotification(script.name, e.message, false);
+                    }
+                });
+            } else { // status notification
+                proc.wait_check_async(null, (proc, result) => {
+                    try {
+                        proc.wait_check_finish(result);
+                        this._showNotification(script.name, _("Script executed successfully"), true);
+                    } catch (e) {
+                        const exitStatus = proc.get_exit_status();
+                        this._showNotification(
+                            script.name,
+                            _("Failed with exit code %d").format(exitStatus),
+                            false
+                        );
+                    }
+                });
+            }
         } catch (e) {
-            console.error(`Failed to launch script: ${e}`);
+            if (notifyType !== 'none') {
+                this._showNotification(script.name, e.message, false);
+            }
+            console.error(`Failed to launch script: ${e.message}`);
         }
 
         Main.overview.hide();
@@ -322,6 +429,10 @@ export default class ScriptSearchExtension extends Extension {
         this._settingsChangedIds.push(
             this._settings.connect(`changed::${DEFAULT_ICON_KEY}`,
                 () => this._scriptProvider.updateDefaultIcon())
+        );
+        this._settingsChangedIds.push(
+            this._settings.connect(`changed::${DEFAULT_NOTIFICATION_STYLE_KEY}`,
+                () => this._scriptProvider.updateDefaultNotificationStyle())
         );
 
         // Register the provider

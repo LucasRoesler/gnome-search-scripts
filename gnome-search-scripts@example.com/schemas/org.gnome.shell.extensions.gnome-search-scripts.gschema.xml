@@ -11,5 +11,10 @@
       <summary>Default script icon</summary>
       <description>Icon used for scripts without a specified icon</description>
     </key>
+    <key name="default-notification-style" type="s">
+      <default>'status'</default>
+      <summary>Default notification style</summary>
+      <description>How scripts notify by default (status, stdout, or none)</description>
+    </key>
   </schema>
 </schemalist>
