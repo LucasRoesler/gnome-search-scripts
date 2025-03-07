@@ -6,7 +6,7 @@ export const REFRESH_SCRIPTS_TRIGGER_KEY = 'refresh-scripts-trigger';
 
 // Notification types
 export const NOTIFICATION_TYPES = ['status', 'stdout', 'none'] as const;
-export type NotificationType = typeof NOTIFICATION_TYPES[number];
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 // Default values
 export const DEFAULT_SCRIPT_LOCATION = '~/.config/gnome-search-scripts';

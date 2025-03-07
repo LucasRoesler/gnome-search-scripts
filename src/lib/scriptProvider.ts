@@ -8,7 +8,12 @@ import { FileManager } from './fileManager.js';
 import { NotificationManager } from './notificationManager.js';
 import { SearchHandler, Script } from './searchHandler.js';
 import * as Utils from './utils.js';
-import { NotificationType } from './constants.js';
+import {
+    NotificationType,
+    DEFAULT_SCRIPT_LOCATION,
+    DEFAULT_ICON,
+    DEFAULT_NOTIFICATION_STYLE,
+} from './constants.js';
 
 /**
  * Main script provider class that integrates all components
@@ -36,9 +41,15 @@ export class ScriptProvider {
         this._scripts = [];
 
         // Initialize script location and defaults
-        this._scriptLocation = Utils.expandPath(this._settings.get_string('script-location'));
-        this._defaultIcon = this._settings.get_string('default-icon');
-        this._defaultNotificationStyle = this._settings.get_string('default-notification-style') as NotificationType;
+        const scriptLocation = this._settings.get_string('script-location');
+        this._scriptLocation = Utils.expandPath(scriptLocation || DEFAULT_SCRIPT_LOCATION);
+
+        const defaultIcon = this._settings.get_string('default-icon');
+        this._defaultIcon = defaultIcon || DEFAULT_ICON;
+
+        const notificationStyle = this._settings.get_string('default-notification-style');
+        this._defaultNotificationStyle = (notificationStyle ||
+            DEFAULT_NOTIFICATION_STYLE) as NotificationType;
 
         // Initialize components
         this._notificationManager = new NotificationManager();
@@ -95,7 +106,8 @@ export class ScriptProvider {
      * Update script location when settings change
      */
     updateScriptLocation(): void {
-        const newLocation = Utils.expandPath(this._settings.get_string('script-location'));
+        const scriptLocation = this._settings.get_string('script-location');
+        const newLocation = Utils.expandPath(scriptLocation || DEFAULT_SCRIPT_LOCATION);
 
         if (this._fileManager.updateScriptLocation(newLocation)) {
             this._scriptLocation = newLocation;
@@ -107,7 +119,8 @@ export class ScriptProvider {
      * Update default icon when settings change
      */
     updateDefaultIcon(): void {
-        this._defaultIcon = this._settings.get_string('default-icon');
+        const defaultIcon = this._settings.get_string('default-icon');
+        this._defaultIcon = defaultIcon || DEFAULT_ICON;
         this._fileManager.updateDefaultIcon(this._defaultIcon);
 
         // Reload scripts to update icons
@@ -118,7 +131,9 @@ export class ScriptProvider {
      * Update default notification style when settings change
      */
     updateDefaultNotificationStyle(): void {
-        this._defaultNotificationStyle = this._settings.get_string('default-notification-style') as NotificationType;
+        const notificationStyle = this._settings.get_string('default-notification-style');
+        this._defaultNotificationStyle = (notificationStyle ||
+            DEFAULT_NOTIFICATION_STYLE) as NotificationType;
         this._fileManager.updateDefaultNotificationStyle(this._defaultNotificationStyle);
 
         // Reload scripts to update notification styles
@@ -164,7 +179,11 @@ export class ScriptProvider {
     /**
      * Get subsearch result set based on previous results and new terms
      */
-    async getSubsearchResultSet(results: string[], terms: string[], cancellable?: Gio.Cancellable): Promise<string[]> {
+    async getSubsearchResultSet(
+        results: string[],
+        terms: string[],
+        cancellable?: Gio.Cancellable
+    ): Promise<string[]> {
         return this._searchHandler.getSubsearchResultSet(results, terms, cancellable);
     }
 
@@ -205,7 +224,7 @@ export class ScriptProvider {
         flags |= Gio.SubprocessFlags.STDERR_PIPE;
 
         const launcher = new Gio.SubprocessLauncher({
-            flags: flags
+            flags: flags,
         });
 
         // Set working directory to the script's directory for proper relative path handling
@@ -235,9 +254,16 @@ export class ScriptProvider {
                         const output = stdout || (stderr && !success ? stderr : '');
 
                         if (output) {
-                            this._notificationManager.showNotification(script.name, output, success);
+                            this._notificationManager.showNotification(
+                                script.name,
+                                output,
+                                success
+                            );
                         } else if (!success) {
-                            this._notificationManager.showExitStatus(script.name, proc.get_exit_status());
+                            this._notificationManager.showExitStatus(
+                                script.name,
+                                proc.get_exit_status()
+                            );
                         } else {
                             this._notificationManager.showSuccess(script.name);
                         }
@@ -245,7 +271,8 @@ export class ScriptProvider {
                         this._notificationManager.showError(script.name, e as Error);
                     }
                 });
-            } else { // status notification
+            } else {
+                // status notification
                 proc.wait_check_async(null, (proc, result) => {
                     try {
                         proc.wait_check_finish(result);

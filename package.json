@@ -6,11 +6,24 @@
     "private": true,
     "scripts": {
         "build": "node esbuild.config.mjs",
-        "watch": "node esbuild.config.mjs --watch"
+        "watch": "node esbuild.config.mjs --watch",
+        "type-check": "tsc --noEmit",
+        "lint": "eslint \"src/**/*.{js,ts}\"",
+        "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
+        "format": "prettier --write \"src/**/*.{js,ts}\"",
+        "format:check": "prettier --check \"src/**/*.{js,ts}\""
     },
     "devDependencies": {
+        "@eslint/js": "^9.21.0",
+        "@typescript-eslint/eslint-plugin": "^8.26.0",
+        "@typescript-eslint/parser": "^8.26.0",
         "esbuild": "^0.19.5",
-        "typescript": "^5.2.2"
+        "eslint": "^9.21.0",
+        "eslint-config-prettier": "^10.1.1",
+        "eslint-plugin-prettier": "^5.2.3",
+        "prettier": "^3.5.3",
+        "typescript": "^5.2.2",
+        "typescript-eslint": "^8.26.0"
     },
     "dependencies": {
         "@girs/gjs": "^3.2.6",

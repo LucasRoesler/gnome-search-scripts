@@ -11,10 +11,17 @@
             "DOM"
         ],
         "skipLibCheck": true,
-        "noImplicitAny": false
+        "noImplicitAny": false,
+        "allowSyntheticDefaultImports": true,
+        "baseUrl": ".",
+        "typeRoots": [
+            "./node_modules/@types",
+            "./node_modules/@girs"
+        ]
     },
     "include": [
-        "ambient.d.ts"
+        "ambient.d.ts",
+        "src/**/*.ts"
     ],
     "files": [
         "src/extension.ts",

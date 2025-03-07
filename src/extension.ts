@@ -7,7 +7,7 @@ import {
     SCRIPT_LOCATION_KEY,
     DEFAULT_ICON_KEY,
     DEFAULT_NOTIFICATION_STYLE_KEY,
-    REFRESH_SCRIPTS_TRIGGER_KEY
+    REFRESH_SCRIPTS_TRIGGER_KEY,
 } from './lib/constants.js';
 
 /**
@@ -27,22 +27,26 @@ export default class ScriptSearchExtension extends Extension {
 
         // Connect to settings changes
         this._settingsChangedIds.push(
-            this._settings.connect(`changed::${SCRIPT_LOCATION_KEY}`,
-                () => this._scriptProvider?.updateScriptLocation())
+            this._settings.connect(`changed::${SCRIPT_LOCATION_KEY}`, () =>
+                this._scriptProvider?.updateScriptLocation()
+            )
         );
         this._settingsChangedIds.push(
-            this._settings.connect(`changed::${DEFAULT_ICON_KEY}`,
-                () => this._scriptProvider?.updateDefaultIcon())
+            this._settings.connect(`changed::${DEFAULT_ICON_KEY}`, () =>
+                this._scriptProvider?.updateDefaultIcon()
+            )
         );
         this._settingsChangedIds.push(
-            this._settings.connect(`changed::${DEFAULT_NOTIFICATION_STYLE_KEY}`,
-                () => this._scriptProvider?.updateDefaultNotificationStyle())
+            this._settings.connect(`changed::${DEFAULT_NOTIFICATION_STYLE_KEY}`, () =>
+                this._scriptProvider?.updateDefaultNotificationStyle()
+            )
         );
 
         // Connect to refresh trigger
         this._settingsChangedIds.push(
-            this._settings.connect(`changed::${REFRESH_SCRIPTS_TRIGGER_KEY}`,
-                () => this._scriptProvider?.refreshScripts())
+            this._settings.connect(`changed::${REFRESH_SCRIPTS_TRIGGER_KEY}`, () =>
+                this._scriptProvider?.refreshScripts()
+            )
         );
 
         // Register the provider

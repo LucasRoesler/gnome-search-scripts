@@ -32,24 +32,27 @@ export function expandPath(path: string): string {
  * @param defaultNotificationStyle - Default notification style to use if not specified
  * @returns Metadata object or null if parsing failed
  */
-export function parseScriptMetadata(scriptPath: string, defaultNotificationStyle: NotificationType): ScriptMetadata | null {
+export function parseScriptMetadata(
+    scriptPath: string,
+    defaultNotificationStyle: NotificationType
+): ScriptMetadata | null {
     console.log(`Parsing metadata for script: ${scriptPath}`);
     try {
-        let fileContents = Shell.get_file_contents_utf8_sync(scriptPath);
-        let lines = fileContents.split('\n');
-        let metadata: ScriptMetadata = {};
+        const fileContents = Shell.get_file_contents_utf8_sync(scriptPath);
+        const lines = fileContents.split('\n');
+        const metadata: ScriptMetadata = {};
 
         console.log(`Found ${lines.length} lines in script file`);
 
         for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
+            const line = lines[i].trim();
             if (line.startsWith('#!')) {
                 console.log(`Line ${i}: Skipping shebang line: ${line}`);
                 continue;
             }
             if (line.startsWith('#')) {
                 console.log(`Line ${i}: Processing comment line: ${line}`);
-                let match = line.match(/#\s*(\w+):\s*(.*)/);
+                const match = line.match(/#\s*(\w+):\s*(.*)/);
                 if (match) {
                     const key = match[1].toLowerCase();
                     console.log(`  Found metadata: ${key} = "${match[2]}"`);
@@ -60,7 +63,9 @@ export function parseScriptMetadata(scriptPath: string, defaultNotificationStyle
                         if (['status', 'stdout', 'none'].includes(notifyValue)) {
                             metadata.notify = notifyValue;
                         } else {
-                            console.warn(`Invalid notify value "${notifyValue}" in ${scriptPath}, using default`);
+                            console.warn(
+                                `Invalid notify value "${notifyValue}" in ${scriptPath}, using default`
+                            );
                             metadata.notify = defaultNotificationStyle;
                         }
                     } else if (key === 'name') {
@@ -81,7 +86,9 @@ export function parseScriptMetadata(scriptPath: string, defaultNotificationStyle
 
         // Set default notification style if not specified
         if (!metadata.notify) {
-            console.log(`No notify value specified in ${scriptPath}, using default: ${defaultNotificationStyle}`);
+            console.log(
+                `No notify value specified in ${scriptPath}, using default: ${defaultNotificationStyle}`
+            );
             metadata.notify = defaultNotificationStyle;
         }
 

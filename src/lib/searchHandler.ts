@@ -90,7 +90,9 @@ export class SearchHandler {
 
                 // Log match details for debugging
                 const matches = nameMatch || descriptionMatch || pathMatch;
-                console.log(`Checking "${script.name}": nameMatch=${nameMatch}, descMatch=${descriptionMatch}, pathMatch=${pathMatch}, RESULT=${matches}`);
+                console.log(
+                    `Checking "${script.name}": nameMatch=${nameMatch}, descMatch=${descriptionMatch}, pathMatch=${pathMatch}, RESULT=${matches}`
+                );
 
                 if (matches) {
                     console.log(`Match found: ${script.name} at original index ${originalIndex}`);
@@ -102,7 +104,7 @@ export class SearchHandler {
 
             console.log(`Search results: ${results.length} matches found`);
 
-            if (cancelId && !cancellable?.is_cancelled())
+            if (cancelId && cancellable && !cancellable.is_cancelled())
                 cancellable.disconnect(cancelId);
 
             resolve(results);
@@ -117,7 +119,11 @@ export class SearchHandler {
      * @param cancellable - Cancellable object
      * @returns Promise resolving to array of result IDs
      */
-    async getSubsearchResultSet(previousResults: string[], terms: string[], cancellable?: Gio.Cancellable): Promise<string[]> {
+    async getSubsearchResultSet(
+        previousResults: string[],
+        terms: string[],
+        cancellable?: Gio.Cancellable
+    ): Promise<string[]> {
         // For simplicity, we just perform a new search
         return this.getInitialResultSet(terms, cancellable);
     }
@@ -130,8 +136,7 @@ export class SearchHandler {
      * @returns Filtered results
      */
     filterResults(results: string[], maxResults: number): string[] {
-        if (results.length <= maxResults)
-            return results;
+        if (results.length <= maxResults) return results;
         return results.slice(0, maxResults);
     }
 
@@ -142,7 +147,10 @@ export class SearchHandler {
      * @param cancellable - Cancellable object
      * @returns Promise resolving to array of result metadata
      */
-    async getResultMetas(resultIds: string[], cancellable?: Gio.Cancellable): Promise<ResultMeta[]> {
+    async getResultMetas(
+        resultIds: string[],
+        cancellable?: Gio.Cancellable
+    ): Promise<ResultMeta[]> {
         return new Promise((resolve, reject) => {
             const cancelId = cancellable?.connect(() => {
                 reject(new Error('Operation cancelled'));
@@ -150,48 +158,53 @@ export class SearchHandler {
 
             console.log(`Getting metadata for result IDs: ${resultIds.join(', ')}`);
 
-            const metas = resultIds.map(id => {
-                const index = parseInt(id);
-                console.log(`Processing result ID ${id} (index ${index})`);
+            const metas = resultIds
+                .map(id => {
+                    const index = parseInt(id);
+                    console.log(`Processing result ID ${id} (index ${index})`);
 
-                if (index < 0 || index >= this._scripts.length) {
-                    console.error(`Invalid script index: ${index}, scripts length: ${this._scripts.length}`);
-                    return null;
-                }
-
-                const script = this._scripts[index];
-                console.log(`Found script for ID ${id}: ${script.name}`);
-
-                const scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
-
-                // For scripts in subdirectories, include the path in the description
-                let description = script.description;
-                if (script.path && script.path !== script.file) {
-                    // Extract the directory part of the path
-                    const dirPath = script.path.substring(0, script.path.lastIndexOf('/'));
-                    // If there's a description, append the path. Otherwise, just use the path.
-                    description = description ?
-                        `${description} [${dirPath}]` :
-                        `[${dirPath}]`;
-                }
-
-                return {
-                    id: id,
-                    name: script.name,
-                    description: description,
-                    createIcon: (size: number) => {
-                        return new St.Icon({
-                            icon_name: script.icon,
-                            width: size * scaleFactor,
-                            height: size * scaleFactor
-                        });
+                    if (index < 0 || index >= this._scripts.length) {
+                        console.error(
+                            `Invalid script index: ${index}, scripts length: ${this._scripts.length}`
+                        );
+                        return null;
                     }
-                };
-            }).filter((meta): meta is ResultMeta => meta !== null);
+
+                    const script = this._scripts[index];
+                    console.log(`Found script for ID ${id}: ${script.name}`);
+
+                    // Use any type to bypass strict type checking for global.stage
+                    const scaleFactor = St.ThemeContext.get_for_stage(
+                        global.stage as any
+                    ).scale_factor;
+
+                    // For scripts in subdirectories, include the path in the description
+                    let description = script.description;
+                    if (script.path && script.path !== script.file) {
+                        // Extract the directory part of the path
+                        const dirPath = script.path.substring(0, script.path.lastIndexOf('/'));
+                        // If there's a description, append the path. Otherwise, just use the path.
+                        description = description ? `${description} [${dirPath}]` : `[${dirPath}]`;
+                    }
+
+                    return {
+                        id: id,
+                        name: script.name,
+                        description: description,
+                        createIcon: (size: number) => {
+                            return new St.Icon({
+                                icon_name: script.icon,
+                                width: size * scaleFactor,
+                                height: size * scaleFactor,
+                            });
+                        },
+                    };
+                })
+                .filter((meta): meta is ResultMeta => meta !== null);
 
             console.log(`Returning ${metas.length} metadata objects`);
 
-            if (cancelId && !cancellable?.is_cancelled())
+            if (cancelId && cancellable && !cancellable.is_cancelled())
                 cancellable.disconnect(cancelId);
 
             resolve(metas);

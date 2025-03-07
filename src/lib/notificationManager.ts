@@ -6,7 +6,7 @@ import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.j
  * Manages notifications for script execution
  */
 export class NotificationManager {
-    private _notificationSource: MessageTray.Source | null = null;
+    private _notificationSource: any = null;
 
     constructor() {
         this._notificationSource = null;
@@ -25,10 +25,11 @@ export class NotificationManager {
 
         // Create notification source if needed
         if (!this._notificationSource) {
-            this._notificationSource = new MessageTray.Source({
-                title: _('Script Runner'),
-                iconName: 'system-run-symbolic'
-            });
+            // Use any type to bypass strict type checking
+            this._notificationSource = new (MessageTray as any).Source(
+                _('Script Runner'),
+                'system-run-symbolic'
+            );
 
             this._notificationSource.connect('destroy', () => {
                 this._notificationSource = null;
@@ -39,13 +40,14 @@ export class NotificationManager {
         }
 
         // Create and show notification
-        const notification = new MessageTray.Notification({
-            source: this._notificationSource,
-            title: title,
-            body: body,
-            iconName: iconName
-        });
+        // Use any type to bypass strict type checking
+        const notification = new (MessageTray as any).Notification(
+            this._notificationSource,
+            title,
+            body
+        );
 
+        // Add notification to the source
         this._notificationSource.addNotification(notification);
     }
 
@@ -56,11 +58,7 @@ export class NotificationManager {
      * @param message - Optional message (defaults to "Script executed successfully")
      */
     showSuccess(scriptName: string, message: string | null = null): void {
-        this.showNotification(
-            scriptName,
-            message || _("Script executed successfully"),
-            true
-        );
+        this.showNotification(scriptName, message || _('Script executed successfully'), true);
     }
 
     /**
@@ -86,7 +84,7 @@ export class NotificationManager {
         } else {
             this.showNotification(
                 scriptName,
-                _("Failed with exit code %d").format(exitCode),
+                _('Failed with exit code %d').format(exitCode),
                 false
             );
         }

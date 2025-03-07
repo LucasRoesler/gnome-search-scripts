@@ -51,7 +51,14 @@ This extension is implemented in TypeScript and uses esbuild for compilation. Th
 ### Development Workflow
 
 1. Make changes to the TypeScript files in the `src/` directory.
-2. Build the extension:
+2. Lint and format your code:
+   ```
+   make lint      # Check for linting issues
+   make lint-fix  # Fix linting issues automatically
+   make format    # Format code with Prettier
+   make check     # Run all checks (lint, format, type-check)
+   ```
+3. Build the extension:
    ```
    make build
    ```
@@ -59,11 +66,26 @@ This extension is implemented in TypeScript and uses esbuild for compilation. Th
    ```
    npm run watch
    ```
-3. Install the extension:
+4. Install the extension:
    ```
    make install
    ```
-4. Restart GNOME Shell to load the changes.
+5. Restart GNOME Shell to load the changes.
+
+### Development Tools
+
+This project uses several development tools to ensure code quality:
+
+- **TypeScript**: For type checking and modern JavaScript features
+- **ESLint**: For code linting and enforcing best practices
+- **Prettier**: For consistent code formatting
+- **esbuild**: For fast TypeScript compilation
+
+The configuration files for these tools are:
+- `tsconfig.json`: TypeScript configuration
+- `eslint.config.js`: ESLint configuration
+- `.prettierrc.json`: Prettier configuration
+- `esbuild.config.mjs`: esbuild configuration
 
 ### Project Structure
 

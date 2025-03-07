@@ -1,0 +1,12 @@
+{
+    "uuid": "gnome-search-scripts@example.com",
+    "name": "Gnome Search Scripts",
+    "description": "A GNOME Shell extension to run scripts from a folder.",
+    "shell-version": [
+        "45",
+        "46",
+        "47"
+    ],
+    "version": 1,
+    "settings-schema": "org.gnome.shell.extensions.gnome-search-scripts"
+}

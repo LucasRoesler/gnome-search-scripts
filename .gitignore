@@ -19,3 +19,6 @@ gnome-search-scripts@example.com/schemas/gschemas.compiled
 # OS files
 .DS_Store
 Thumbs.db
+
+# Task tracking
+.memory/

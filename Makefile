@@ -3,9 +3,21 @@ DOMAIN=example.com
 UUID=$(NAME)@$(DOMAIN)
 DIST_DIR=dist/$(UUID)
 
-.PHONY: all build install pack clean
+.PHONY: all build install pack clean lint format
 
 all: build
+
+lint:
+	npm run lint
+
+lint-fix:
+	npm run lint:fix
+
+format:
+	npm run format
+
+check: lint format
+	npm run type-check
 
 node_modules: package.json
 	npm install

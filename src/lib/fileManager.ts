@@ -63,8 +63,8 @@ export class FileManager {
             this._monitor = file.monitor_directory(
                 // Use WATCH_MOUNTS to detect new subdirectories
                 Gio.FileMonitorFlags.WATCH_MOUNTS |
-                // Use WATCH_MOVES to detect file/directory renames
-                Gio.FileMonitorFlags.WATCH_MOVES,
+                    // Use WATCH_MOVES to detect file/directory renames
+                    Gio.FileMonitorFlags.WATCH_MOVES,
                 null
             );
 
@@ -92,15 +92,19 @@ export class FileManager {
         try {
             // Check if the file exists (it might have been deleted)
             if (file && file.query_exists(null)) {
-                const fileInfo = file.query_info('standard::name,standard::type',
-                    Gio.FileQueryInfoFlags.NONE, null);
+                const fileInfo = file.query_info(
+                    'standard::name,standard::type',
+                    Gio.FileQueryInfoFlags.NONE,
+                    null
+                );
                 const fileName = fileInfo.get_name();
                 const fileType = fileInfo.get_file_type();
 
                 // Consider changes relevant if:
                 // 1. It's a directory (new directory created or deleted)
                 // 2. It's a script file
-                isRelevant = (fileType === Gio.FileType.DIRECTORY) ||
+                isRelevant =
+                    fileType === Gio.FileType.DIRECTORY ||
                     (fileType === Gio.FileType.REGULAR && fileName.endsWith(SCRIPT_FILE_EXTENSION));
             } else {
                 // If the file doesn't exist anymore, we need to check if it was a directory or script file
@@ -113,13 +117,14 @@ export class FileManager {
         }
 
         // React to relevant file events
-        if (isRelevant && (
-            eventType === Gio.FileMonitorEvent.CREATED ||
-            eventType === Gio.FileMonitorEvent.DELETED ||
-            eventType === Gio.FileMonitorEvent.CHANGED ||
-            eventType === Gio.FileMonitorEvent.MOVED ||
-            eventType === Gio.FileMonitorEvent.RENAMED)) {
-
+        if (
+            isRelevant &&
+            (eventType === Gio.FileMonitorEvent.CREATED ||
+                eventType === Gio.FileMonitorEvent.DELETED ||
+                eventType === Gio.FileMonitorEvent.CHANGED ||
+                eventType === Gio.FileMonitorEvent.MOVED ||
+                eventType === Gio.FileMonitorEvent.RENAMED)
+        ) {
             // Debounce rapid changes with a timeout
             if (this._reloadScriptsTimeoutId) {
                 GLib.source_remove(this._reloadScriptsTimeoutId);
@@ -153,7 +158,9 @@ export class FileManager {
         // Log the loaded scripts with detailed information
         console.log(`Loaded ${scripts.length} scripts`);
         scripts.forEach(script => {
-            console.log(`- ${script.name} (file: ${script.file}, path: ${script.path}, description: "${script.description}")`);
+            console.log(
+                `- ${script.name} (file: ${script.file}, path: ${script.path}, description: "${script.description}")`
+            );
         });
 
         return scripts;
@@ -190,17 +197,21 @@ export class FileManager {
                 }
 
                 // Build the relative path for this item
-                const itemRelativePath = relativePath ?
-                    relativePath + '/' + fileName :
-                    fileName;
+                const itemRelativePath = relativePath ? relativePath + '/' + fileName : fileName;
 
                 if (fileType === Gio.FileType.DIRECTORY) {
                     // Recursively process subdirectories
                     this._loadScriptsRecursive(itemRelativePath, scripts);
-                } else if (fileType === Gio.FileType.REGULAR && fileName.endsWith(SCRIPT_FILE_EXTENSION)) {
+                } else if (
+                    fileType === Gio.FileType.REGULAR &&
+                    fileName.endsWith(SCRIPT_FILE_EXTENSION)
+                ) {
                     // Process script files
                     const scriptPath = this._scriptLocation + '/' + itemRelativePath;
-                    const metadata = Utils.parseScriptMetadata(scriptPath, this._defaultNotificationStyle);
+                    const metadata = Utils.parseScriptMetadata(
+                        scriptPath,
+                        this._defaultNotificationStyle
+                    );
 
                     if (metadata) {
                         scripts.push({
@@ -209,7 +220,7 @@ export class FileManager {
                             name: metadata.name || fileName,
                             description: metadata.description || '',
                             icon: metadata.icon || this._defaultIcon,
-                            notify: metadata.notify || this._defaultNotificationStyle
+                            notify: metadata.notify || this._defaultNotificationStyle,
                         });
                     }
                 }

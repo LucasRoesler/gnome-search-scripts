@@ -1,0 +1,10 @@
+version: "0.2"
+ignorePaths: []
+dictionaryDefinitions: []
+dictionaries: []
+words:
+  - girs
+  - gschema
+  - gschemas
+ignoreWords: []
+import: []

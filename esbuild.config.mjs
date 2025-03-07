@@ -15,7 +15,7 @@ fs.mkdirSync(outDir, { recursive: true });
 
 // Copy metadata.json and schemas to output directory
 fs.copyFileSync(
-    path.join(process.cwd(), 'gnome-search-scripts@example.com', 'metadata.json'),
+    path.join(process.cwd(), 'metadata.json'),
     path.join(outDir, 'metadata.json')
 );
 
@@ -25,17 +25,17 @@ fs.mkdirSync(schemasDir, { recursive: true });
 
 // Copy schema file
 fs.copyFileSync(
-    path.join(process.cwd(), 'gnome-search-scripts@example.com', 'schemas', 'org.gnome.shell.extensions.gnome-search-scripts.gschema.xml'),
+    path.join(process.cwd(), 'schemas', 'org.gnome.shell.extensions.gnome-search-scripts.gschema.xml'),
     path.join(schemasDir, 'org.gnome.shell.extensions.gnome-search-scripts.gschema.xml')
 );
 
-// Copy compiled schemas if they exist
-const compiledSchemaPath = path.join(process.cwd(), 'gnome-search-scripts@example.com', 'schemas', 'gschemas.compiled');
-if (fs.existsSync(compiledSchemaPath)) {
-    fs.copyFileSync(
-        compiledSchemaPath,
-        path.join(schemasDir, 'gschemas.compiled')
-    );
+// Compile schemas
+try {
+    const { execSync } = await import('child_process');
+    execSync(`glib-compile-schemas ${schemasDir}`);
+    console.log('Schemas compiled successfully');
+} catch (error) {
+    console.error('Failed to compile schemas:', error);
 }
 
 // Build configuration
