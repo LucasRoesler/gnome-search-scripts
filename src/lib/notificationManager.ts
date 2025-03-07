@@ -25,11 +25,12 @@ export class NotificationManager {
 
         // Create notification source if needed
         if (!this._notificationSource) {
-            // Use any type to bypass strict type checking
-            this._notificationSource = new (MessageTray as any).Source(
-                _('Script Runner'),
-                'system-run-symbolic'
-            );
+            // Create source with object-based API
+            // Use type assertion to work around type checking issues
+            this._notificationSource = new (MessageTray.Source as any)({
+                title: _('Script Runner'),
+                iconName: 'system-run-symbolic'
+            });
 
             this._notificationSource.connect('destroy', () => {
                 this._notificationSource = null;
@@ -39,13 +40,14 @@ export class NotificationManager {
             Main.messageTray.add(this._notificationSource);
         }
 
-        // Create and show notification
-        // Use any type to bypass strict type checking
-        const notification = new (MessageTray as any).Notification(
-            this._notificationSource,
-            title,
-            body
-        );
+        // Create notification with object-based API
+        // Use type assertion to work around type checking issues
+        const notification = new (MessageTray.Notification as any)({
+            source: this._notificationSource,
+            title: title,
+            body: body,
+            iconName: iconName
+        });
 
         // Add notification to the source
         this._notificationSource.addNotification(notification);
