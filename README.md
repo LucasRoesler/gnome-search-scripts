@@ -61,15 +61,33 @@ A GNOME Shell extension that allows you to execute scripts directly from the GNO
    - `Icon`: The icon name to display (uses GNOME icon names)
    - `Notify`: How to notify after execution (status, stdout, or none)
 
-3. **Notification Types**
+3. **Subdirectory Support**
+   Scripts can be organized in subdirectories within the main scripts directory:
+
+   ```
+   ~/.config/gnome-search-scripts/
+   ├── system/
+   │   ├── reboot.sh
+   │   └── shutdown.sh
+   ├── network/
+   │   ├── wifi-toggle.sh
+   │   └── vpn-connect.sh
+   └── media/
+       ├── volume-up.sh
+       └── volume-down.sh
+   ```
+
+   The extension will recursively search all subdirectories for `.sh` files and make them available in search results. When executing scripts in subdirectories, the working directory is set to the script's directory, allowing scripts to use relative paths for resources in the same directory.
+
+4. **Notification Types**
    - `status`: Shows success/failure with exit code (default)
    - `stdout`: Shows the script's output in the notification
    - `none`: No notifications
 
-4. **Running Scripts**
+5. **Running Scripts**
    Open the Activities overview and start typing the name of your script. It will appear in the search results with its name, description, and icon. Click on it to run the script.
 
-5. **Preferences**
+6. **Preferences**
    Access the extension preferences through the GNOME Extensions app or run:
    ```bash
    gnome-extensions prefs gnome-search-scripts@example.com
