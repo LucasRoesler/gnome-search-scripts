@@ -1,0 +1,21 @@
+# Node.js dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Distribution zip
+*.zip
+
+# Compiled schemas
+gnome-search-scripts@example.com/schemas/gschemas.compiled
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

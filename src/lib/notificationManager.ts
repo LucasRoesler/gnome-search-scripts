@@ -6,6 +6,8 @@ import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.j
  * Manages notifications for script execution
  */
 export class NotificationManager {
+    private _notificationSource: MessageTray.Source | null = null;
+
     constructor() {
         this._notificationSource = null;
     }
@@ -13,11 +15,11 @@ export class NotificationManager {
     /**
      * Show a notification with the given title, body, and success status
      *
-     * @param {string} title - Notification title
-     * @param {string} body - Notification body
-     * @param {boolean} success - Whether the operation was successful
+     * @param title - Notification title
+     * @param body - Notification body
+     * @param success - Whether the operation was successful
      */
-    showNotification(title, body, success) {
+    showNotification(title: string, body: string, success: boolean): void {
         // Use different icons for success/failure
         const iconName = success ? 'emblem-ok-symbolic' : 'dialog-warning-symbolic';
 
@@ -50,10 +52,10 @@ export class NotificationManager {
     /**
      * Show a success notification
      *
-     * @param {string} scriptName - Name of the script
-     * @param {string} [message] - Optional message (defaults to "Script executed successfully")
+     * @param scriptName - Name of the script
+     * @param message - Optional message (defaults to "Script executed successfully")
      */
-    showSuccess(scriptName, message = null) {
+    showSuccess(scriptName: string, message: string | null = null): void {
         this.showNotification(
             scriptName,
             message || _("Script executed successfully"),
@@ -64,10 +66,10 @@ export class NotificationManager {
     /**
      * Show an error notification
      *
-     * @param {string} scriptName - Name of the script
-     * @param {string|Error} error - Error message or Error object
+     * @param scriptName - Name of the script
+     * @param error - Error message or Error object
      */
-    showError(scriptName, error) {
+    showError(scriptName: string, error: string | Error): void {
         const errorMessage = error instanceof Error ? error.message : error;
         this.showNotification(scriptName, errorMessage, false);
     }
@@ -75,10 +77,10 @@ export class NotificationManager {
     /**
      * Show a notification with the exit code
      *
-     * @param {string} scriptName - Name of the script
-     * @param {number} exitCode - Process exit code
+     * @param scriptName - Name of the script
+     * @param exitCode - Process exit code
      */
-    showExitStatus(scriptName, exitCode) {
+    showExitStatus(scriptName: string, exitCode: number): void {
         if (exitCode === 0) {
             this.showSuccess(scriptName);
         } else {
@@ -93,7 +95,7 @@ export class NotificationManager {
     /**
      * Clean up resources
      */
-    destroy() {
+    destroy(): void {
         this._notificationSource = null;
     }
 }

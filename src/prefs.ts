@@ -8,13 +8,15 @@ import Pango from 'gi://Pango';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 // Settings keys
-const SCRIPT_LOCATION_KEY = 'script-location';
-const DEFAULT_ICON_KEY = 'default-icon';
-const DEFAULT_NOTIFICATION_STYLE_KEY = 'default-notification-style';
-const REFRESH_SCRIPTS_TRIGGER_KEY = 'refresh-scripts-trigger';
+import {
+    SCRIPT_LOCATION_KEY,
+    DEFAULT_ICON_KEY,
+    DEFAULT_NOTIFICATION_STYLE_KEY,
+    REFRESH_SCRIPTS_TRIGGER_KEY
+} from './lib/constants.js';
 
 export default class ScriptSearchPreferences extends ExtensionPreferences {
-    fillPreferencesWindow(window) {
+    fillPreferencesWindow(window: Adw.PreferencesWindow): void {
         // Get settings (uses the settings-schema from metadata.json)
         const settings = this.getSettings();
 
@@ -82,20 +84,20 @@ export default class ScriptSearchPreferences extends ExtensionPreferences {
                 );
             }
 
-            dialog.connect('response', (dialog, response) => {
+            dialog.connect('response', (dialog: Gtk.FileChooserDialog, response: number) => {
                 if (response === Gtk.ResponseType.ACCEPT) {
                     const file = dialog.get_file();
-                    let path = file.get_path();
+                    let path = file!.get_path();
 
                     // Convert to ~ notation if in home directory
                     const home = GLib.get_home_dir();
-                    if (path.startsWith(home)) {
-                        path = '~' + path.substring(home.length);
+                    if (path!.startsWith(home)) {
+                        path = '~' + path!.substring(home.length);
                     }
 
                     // Update settings
-                    settings.set_string(SCRIPT_LOCATION_KEY, path);
-                    locationLabel.set_label(path);
+                    settings.set_string(SCRIPT_LOCATION_KEY, path!);
+                    locationLabel.set_label(path!);
                 }
 
                 dialog.destroy();

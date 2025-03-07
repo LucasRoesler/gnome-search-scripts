@@ -1,0 +1,19 @@
+{
+    "name": "gnome-search-scripts",
+    "version": "1.0.0",
+    "description": "A GNOME Shell extension to run scripts from a folder",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "build": "node esbuild.config.mjs",
+        "watch": "node esbuild.config.mjs --watch"
+    },
+    "devDependencies": {
+        "esbuild": "^0.19.5",
+        "typescript": "^5.2.2"
+    },
+    "dependencies": {
+        "@girs/gjs": "^3.2.6",
+        "@girs/gnome-shell": "^45.0.0-beta.1"
+    }
+}

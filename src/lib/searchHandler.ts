@@ -1,36 +1,61 @@
 import St from 'gi://St';
-import * as Utils from './utils.js';
+import Gio from 'gi://Gio';
+import { NotificationType } from './constants.js';
+
+/**
+ * Script object interface
+ */
+export interface Script {
+    file: string;
+    path: string;
+    name: string;
+    description: string;
+    icon: string;
+    notify: NotificationType;
+}
+
+/**
+ * Result metadata interface
+ */
+export interface ResultMeta {
+    id: string;
+    name: string;
+    description: string;
+    createIcon: (size: number) => St.Icon;
+}
 
 /**
  * Handles search functionality for scripts
  */
 export class SearchHandler {
+    private _scripts: Script[];
+
     /**
      * Create a new SearchHandler
      *
-     * @param {Array} scripts - Array of script objects
+     * @param scripts - Array of script objects
      */
-    constructor(scripts) {
+    constructor(scripts: Script[]) {
         this._scripts = scripts;
     }
 
     /**
      * Update the scripts array
      *
-     * @param {Array} scripts - New array of script objects
+     * @param scripts - New array of script objects
      */
-    updateScripts(scripts) {
+    updateScripts(scripts: Script[]): void {
         this._scripts = scripts;
     }
 
     /**
      * Get initial result set based on search terms
      *
-     * @param {Array} terms - Search terms
-     * @param {Object} cancellable - Cancellable object
-     * @returns {Promise<Array>} Promise resolving to array of result IDs
+     * @param terms - Search terms
+     * @param cancellable - Cancellable object
+     * @returns Promise resolving to array of result IDs
      */
-    async getInitialResultSet(terms, cancellable) {
+    async getInitialResultSet(terms: string[], cancellable?: Gio.Cancellable): Promise<string[]> {
         return new Promise((resolve, reject) => {
             // Handle cancellation
             const cancelId = cancellable?.connect(() => {
@@ -48,7 +73,7 @@ export class SearchHandler {
             });
 
             // Filter scripts and track original indices
-            const matchedScripts = [];
+            const matchedScripts: string[] = [];
 
             this._scripts.forEach((script, originalIndex) => {
                 // Check if the search term matches the script name or description
@@ -77,7 +102,7 @@ export class SearchHandler {
 
             console.log(`Search results: ${results.length} matches found`);
 
-            if (cancelId && !cancellable.is_cancelled())
+            if (cancelId && !cancellable?.is_cancelled())
                 cancellable.disconnect(cancelId);
 
             resolve(results);
@@ -87,12 +112,12 @@ export class SearchHandler {
     /**
      * Get subsearch result set based on previous results and new terms
      *
-     * @param {Array} previousResults - Previous search results
-     * @param {Array} terms - Search terms
-     * @param {Object} cancellable - Cancellable object
-     * @returns {Promise<Array>} Promise resolving to array of result IDs
+     * @param previousResults - Previous search results
+     * @param terms - Search terms
+     * @param cancellable - Cancellable object
+     * @returns Promise resolving to array of result IDs
      */
-    async getSubsearchResultSet(previousResults, terms, cancellable) {
+    async getSubsearchResultSet(previousResults: string[], terms: string[], cancellable?: Gio.Cancellable): Promise<string[]> {
         // For simplicity, we just perform a new search
         return this.getInitialResultSet(terms, cancellable);
     }
@@ -100,11 +125,11 @@ export class SearchHandler {
     /**
      * Filter results to the maximum number allowed
      *
-     * @param {Array} results - Search results
-     * @param {number} maxResults - Maximum number of results to return
-     * @returns {Array} Filtered results
+     * @param results - Search results
+     * @param maxResults - Maximum number of results to return
+     * @returns Filtered results
      */
-    filterResults(results, maxResults) {
+    filterResults(results: string[], maxResults: number): string[] {
         if (results.length <= maxResults)
             return results;
         return results.slice(0, maxResults);
@@ -113,11 +138,11 @@ export class SearchHandler {
     /**
      * Get metadata for search results
      *
-     * @param {Array} resultIds - Result IDs
-     * @param {Object} cancellable - Cancellable object
-     * @returns {Promise<Array>} Promise resolving to array of result metadata
+     * @param resultIds - Result IDs
+     * @param cancellable - Cancellable object
+     * @returns Promise resolving to array of result metadata
      */
-    async getResultMetas(resultIds, cancellable) {
+    async getResultMetas(resultIds: string[], cancellable?: Gio.Cancellable): Promise<ResultMeta[]> {
         return new Promise((resolve, reject) => {
             const cancelId = cancellable?.connect(() => {
                 reject(new Error('Operation cancelled'));
@@ -154,7 +179,7 @@ export class SearchHandler {
                     id: id,
                     name: script.name,
                     description: description,
-                    createIcon: (size) => {
+                    createIcon: (size: number) => {
                         return new St.Icon({
                             icon_name: script.icon,
                             width: size * scaleFactor,
@@ -162,11 +187,11 @@ export class SearchHandler {
                         });
                     }
                 };
-            }).filter(meta => meta !== null);
+            }).filter((meta): meta is ResultMeta => meta !== null);
 
             console.log(`Returning ${metas.length} metadata objects`);
 
-            if (cancelId && !cancellable.is_cancelled())
+            if (cancelId && !cancellable?.is_cancelled())
                 cancellable.disconnect(cancelId);
 
             resolve(metas);

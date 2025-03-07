@@ -1,13 +1,24 @@
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
+import { NotificationType } from './constants.js';
+
+/**
+ * Metadata extracted from a script file
+ */
+export interface ScriptMetadata {
+    name?: string;
+    description?: string;
+    icon?: string;
+    notify?: NotificationType;
+}
 
 /**
  * Expand ~ to home directory in a path
  *
- * @param {string} path - Path that may contain ~
- * @returns {string} Expanded path
+ * @param path - Path that may contain ~
+ * @returns Expanded path
  */
-export function expandPath(path) {
+export function expandPath(path: string): string {
     if (path.startsWith('~')) {
         return GLib.get_home_dir() + path.substring(1);
     }
@@ -17,16 +28,16 @@ export function expandPath(path) {
 /**
  * Parse metadata from script file
  *
- * @param {string} scriptPath - Path to the script file
- * @param {string} defaultNotificationStyle - Default notification style to use if not specified
- * @returns {Object|null} Metadata object or null if parsing failed
+ * @param scriptPath - Path to the script file
+ * @param defaultNotificationStyle - Default notification style to use if not specified
+ * @returns Metadata object or null if parsing failed
  */
-export function parseScriptMetadata(scriptPath, defaultNotificationStyle) {
+export function parseScriptMetadata(scriptPath: string, defaultNotificationStyle: NotificationType): ScriptMetadata | null {
     console.log(`Parsing metadata for script: ${scriptPath}`);
     try {
         let fileContents = Shell.get_file_contents_utf8_sync(scriptPath);
         let lines = fileContents.split('\n');
-        let metadata = {};
+        let metadata: ScriptMetadata = {};
 
         console.log(`Found ${lines.length} lines in script file`);
 
@@ -40,8 +51,25 @@ export function parseScriptMetadata(scriptPath, defaultNotificationStyle) {
                 console.log(`Line ${i}: Processing comment line: ${line}`);
                 let match = line.match(/#\s*(\w+):\s*(.*)/);
                 if (match) {
-                    console.log(`  Found metadata: ${match[1].toLowerCase()} = "${match[2]}"`);
-                    metadata[match[1].toLowerCase()] = match[2];
+                    const key = match[1].toLowerCase();
+                    console.log(`  Found metadata: ${key} = "${match[2]}"`);
+
+                    if (key === 'notify') {
+                        // Type-check the notify value
+                        const notifyValue = match[2] as NotificationType;
+                        if (['status', 'stdout', 'none'].includes(notifyValue)) {
+                            metadata.notify = notifyValue;
+                        } else {
+                            console.warn(`Invalid notify value "${notifyValue}" in ${scriptPath}, using default`);
+                            metadata.notify = defaultNotificationStyle;
+                        }
+                    } else if (key === 'name') {
+                        metadata.name = match[2];
+                    } else if (key === 'description') {
+                        metadata.description = match[2];
+                    } else if (key === 'icon') {
+                        metadata.icon = match[2];
+                    }
                 } else {
                     console.log(`  Not a metadata comment: ${line}`);
                 }
@@ -49,12 +77,6 @@ export function parseScriptMetadata(scriptPath, defaultNotificationStyle) {
                 console.log(`Line ${i}: Stopping at non-comment line: ${line}`);
                 break;
             }
-        }
-
-        // Validate notify value
-        if (metadata.notify && !['status', 'stdout', 'none'].includes(metadata.notify)) {
-            console.warn(`Invalid notify value "${metadata.notify}" in ${scriptPath}, using default`);
-            metadata.notify = defaultNotificationStyle;
         }
 
         // Set default notification style if not specified
@@ -72,7 +94,7 @@ export function parseScriptMetadata(scriptPath, defaultNotificationStyle) {
 
         return metadata;
     } catch (e) {
-        console.error(`Failed to parse script metadata for ${scriptPath}: ${e.message}`);
+        console.error(`Failed to parse script metadata for ${scriptPath}: ${(e as Error).message}`);
         return null;
     }
 }
@@ -80,10 +102,10 @@ export function parseScriptMetadata(scriptPath, defaultNotificationStyle) {
 /**
  * Extract directory path from a full path
  *
- * @param {string} path - Full path
- * @returns {string} Directory part of the path
+ * @param path - Full path
+ * @returns Directory part of the path
  */
-export function getDirectoryPath(path) {
+export function getDirectoryPath(path: string): string {
     if (!path.includes('/')) {
         return '';
     }

@@ -3,20 +3,35 @@ import GLib from 'gi://GLib';
 
 import * as Utils from './utils.js';
 import { SCRIPT_FILE_EXTENSION } from './constants.js';
+import { Script } from './searchHandler.js';
+import { NotificationType } from './constants.js';
 
 /**
  * Manages file operations and directory monitoring
  */
 export class FileManager {
+    private _scriptLocation: string;
+    private _defaultIcon: string;
+    private _defaultNotificationStyle: NotificationType;
+    private _onScriptsChanged: (() => void) | null;
+    private _monitor: Gio.FileMonitor | null;
+    private _monitorChangedId: number;
+    private _reloadScriptsTimeoutId: number;
+
     /**
      * Create a new FileManager
      *
-     * @param {string} scriptLocation - Base location for scripts
-     * @param {string} defaultIcon - Default icon for scripts
-     * @param {string} defaultNotificationStyle - Default notification style
-     * @param {Function} onScriptsChanged - Callback when scripts change
+     * @param scriptLocation - Base location for scripts
+     * @param defaultIcon - Default icon for scripts
+     * @param defaultNotificationStyle - Default notification style
+     * @param onScriptsChanged - Callback when scripts change
      */
-    constructor(scriptLocation, defaultIcon, defaultNotificationStyle, onScriptsChanged) {
+    constructor(
+        scriptLocation: string,
+        defaultIcon: string,
+        defaultNotificationStyle: NotificationType,
+        onScriptsChanged: () => void
+    ) {
         this._scriptLocation = scriptLocation;
         this._defaultIcon = defaultIcon;
         this._defaultNotificationStyle = defaultNotificationStyle;
@@ -31,7 +46,7 @@ export class FileManager {
     /**
      * Set up directory monitoring
      */
-    _setupMonitor() {
+    private _setupMonitor(): void {
         // Create the directory if it doesn't exist
         try {
             const directory = Gio.File.new_for_path(this._scriptLocation);
@@ -65,7 +80,12 @@ export class FileManager {
     /**
      * Handle directory changes
      */
-    _onScriptDirectoryChanged(monitor, file, otherFile, eventType) {
+    private _onScriptDirectoryChanged(
+        monitor: Gio.FileMonitor,
+        file: Gio.File,
+        otherFile: Gio.File | null,
+        eventType: Gio.FileMonitorEvent
+    ): void {
         // Get file info to check if it's a directory or a script file
         let isRelevant = false;
 
@@ -124,10 +144,10 @@ export class FileManager {
     /**
      * Load all scripts from the script location
      *
-     * @returns {Array} Array of script objects
+     * @returns Array of script objects
      */
-    loadScripts() {
-        const scripts = [];
+    loadScripts(): Script[] {
+        const scripts: Script[] = [];
         this._loadScriptsRecursive('', scripts);
 
         // Log the loaded scripts with detailed information
@@ -142,10 +162,10 @@ export class FileManager {
     /**
      * Recursively load scripts from the given relative path
      *
-     * @param {string} relativePath - Relative path within the script location
-     * @param {Array} scripts - Array to populate with script objects
+     * @param relativePath - Relative path within the script location
+     * @param scripts - Array to populate with script objects
      */
-    _loadScriptsRecursive(relativePath, scripts) {
+    private _loadScriptsRecursive(relativePath: string, scripts: Script[]): void {
         const fullPath = this._scriptLocation + (relativePath ? '/' + relativePath : '');
 
         // Use Gio.File for better directory handling
@@ -159,7 +179,7 @@ export class FileManager {
                 null
             );
 
-            let fileInfo;
+            let fileInfo: Gio.FileInfo | null;
             while ((fileInfo = enumerator.next_file(null)) !== null) {
                 const fileName = fileInfo.get_name();
                 const fileType = fileInfo.get_file_type();
@@ -204,10 +224,10 @@ export class FileManager {
     /**
      * Update the script location
      *
-     * @param {string} newLocation - New script location
-     * @returns {boolean} True if the location was changed
+     * @param newLocation - New script location
+     * @returns True if the location was changed
      */
-    updateScriptLocation(newLocation) {
+    updateScriptLocation(newLocation: string): boolean {
         // Only update if the location has changed
         if (newLocation !== this._scriptLocation) {
             console.log(`Updating script location from ${this._scriptLocation} to ${newLocation}`);
@@ -230,25 +250,25 @@ export class FileManager {
     /**
      * Update the default icon
      *
-     * @param {string} newIcon - New default icon
+     * @param newIcon - New default icon
      */
-    updateDefaultIcon(newIcon) {
+    updateDefaultIcon(newIcon: string): void {
         this._defaultIcon = newIcon;
     }
 
     /**
      * Update the default notification style
      *
-     * @param {string} newStyle - New default notification style
+     * @param newStyle - New default notification style
      */
-    updateDefaultNotificationStyle(newStyle) {
+    updateDefaultNotificationStyle(newStyle: NotificationType): void {
         this._defaultNotificationStyle = newStyle;
     }
 
     /**
      * Clean up resources
      */
-    destroy() {
+    destroy(): void {
         // Clean up monitor
         if (this._monitorChangedId && this._monitor) {
             this._monitor.disconnect(this._monitorChangedId);

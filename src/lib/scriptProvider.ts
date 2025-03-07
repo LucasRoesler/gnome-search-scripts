@@ -2,23 +2,35 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { FileManager } from './fileManager.js';
 import { NotificationManager } from './notificationManager.js';
-import { SearchHandler } from './searchHandler.js';
+import { SearchHandler, Script } from './searchHandler.js';
 import * as Utils from './utils.js';
+import { NotificationType } from './constants.js';
 
 /**
  * Main script provider class that integrates all components
  */
 export class ScriptProvider {
+    private _extension: Extension;
+    private _settings: Gio.Settings;
+    private _scripts: Script[];
+    private _scriptLocation: string;
+    private _defaultIcon: string;
+    private _defaultNotificationStyle: NotificationType;
+    private _notificationManager: NotificationManager;
+    private _fileManager: FileManager;
+    private _searchHandler: SearchHandler;
+
     /**
      * Create a new ScriptProvider
      *
-     * @param {Object} extension - Extension instance
-     * @param {Object} settings - Extension settings
+     * @param extension - Extension instance
+     * @param settings - Extension settings
      */
-    constructor(extension, settings) {
+    constructor(extension: Extension, settings: Gio.Settings) {
         this._extension = extension;
         this._settings = settings;
         this._scripts = [];
@@ -26,7 +38,7 @@ export class ScriptProvider {
         // Initialize script location and defaults
         this._scriptLocation = Utils.expandPath(this._settings.get_string('script-location'));
         this._defaultIcon = this._settings.get_string('default-icon');
-        this._defaultNotificationStyle = this._settings.get_string('default-notification-style');
+        this._defaultNotificationStyle = this._settings.get_string('default-notification-style') as NotificationType;
 
         // Initialize components
         this._notificationManager = new NotificationManager();
@@ -47,9 +59,9 @@ export class ScriptProvider {
     /**
      * Manually refresh all scripts
      *
-     * @param {boolean} showNotification - Whether to show a notification when done
+     * @param showNotification - Whether to show a notification when done
      */
-    refreshScripts(showNotification = true) {
+    refreshScripts(showNotification = true): void {
         console.log('Manually refreshing scripts');
         this._scripts = this._fileManager.loadScripts();
 
@@ -75,14 +87,14 @@ export class ScriptProvider {
     /**
      * Handle script changes
      */
-    _onScriptsChanged() {
+    private _onScriptsChanged(): void {
         this.refreshScripts(false);
     }
 
     /**
      * Update script location when settings change
      */
-    updateScriptLocation() {
+    updateScriptLocation(): void {
         const newLocation = Utils.expandPath(this._settings.get_string('script-location'));
 
         if (this._fileManager.updateScriptLocation(newLocation)) {
@@ -94,7 +106,7 @@ export class ScriptProvider {
     /**
      * Update default icon when settings change
      */
-    updateDefaultIcon() {
+    updateDefaultIcon(): void {
         this._defaultIcon = this._settings.get_string('default-icon');
         this._fileManager.updateDefaultIcon(this._defaultIcon);
 
@@ -105,8 +117,8 @@ export class ScriptProvider {
     /**
      * Update default notification style when settings change
      */
-    updateDefaultNotificationStyle() {
-        this._defaultNotificationStyle = this._settings.get_string('default-notification-style');
+    updateDefaultNotificationStyle(): void {
+        this._defaultNotificationStyle = this._settings.get_string('default-notification-style') as NotificationType;
         this._fileManager.updateDefaultNotificationStyle(this._defaultNotificationStyle);
 
         // Reload scripts to update notification styles
@@ -116,7 +128,7 @@ export class ScriptProvider {
     /**
      * Clean up resources
      */
-    destroy() {
+    destroy(): void {
         if (this._fileManager) {
             this._fileManager.destroy();
         }
@@ -126,57 +138,57 @@ export class ScriptProvider {
         }
 
         this._scripts = [];
-        this._searchHandler = null;
+        this._searchHandler = null as any;
     }
 
     // Required properties for GNOME 45+ search providers
-    get appInfo() {
+    get appInfo(): Gio.AppInfo | null {
         return null;
     }
 
-    get canLaunchSearch() {
+    get canLaunchSearch(): boolean {
         return false;
     }
 
-    get id() {
+    get id(): string {
         return this._extension.uuid;
     }
 
     /**
      * Get initial result set based on search terms
      */
-    async getInitialResultSet(terms, cancellable) {
+    async getInitialResultSet(terms: string[], cancellable?: Gio.Cancellable): Promise<string[]> {
         return this._searchHandler.getInitialResultSet(terms, cancellable);
     }
 
     /**
      * Get subsearch result set based on previous results and new terms
      */
-    async getSubsearchResultSet(results, terms, cancellable) {
+    async getSubsearchResultSet(results: string[], terms: string[], cancellable?: Gio.Cancellable): Promise<string[]> {
         return this._searchHandler.getSubsearchResultSet(results, terms, cancellable);
     }
 
     /**
      * Filter results to the maximum number allowed
      */
-    filterResults(results, maxResults) {
+    filterResults(results: string[], maxResults: number): string[] {
         return this._searchHandler.filterResults(results, maxResults);
     }
 
     /**
      * Get metadata for search results
      */
-    async getResultMetas(resultIds, cancellable) {
+    async getResultMetas(resultIds: string[], cancellable?: Gio.Cancellable) {
         return this._searchHandler.getResultMetas(resultIds, cancellable);
     }
 
     /**
      * Activate a search result (execute a script)
      *
-     * @param {string} resultId - Result ID
-     * @param {Array} terms - Search terms
+     * @param resultId - Result ID
+     * @param terms - Search terms
      */
-    activateResult(resultId, terms) {
+    activateResult(resultId: string, terms: string[]): void {
         const script = this._scripts[parseInt(resultId)];
         const scriptPath = this._scriptLocation + '/' + (script.path || script.file);
         const notifyType = script.notify;
@@ -209,7 +221,7 @@ export class ScriptProvider {
                     try {
                         proc.wait_check_finish(result);
                     } catch (e) {
-                        console.error(`Script execution failed: ${e.message}`);
+                        console.error(`Script execution failed: ${(e as Error).message}`);
                     }
                 });
             } else if (notifyType === 'stdout') {
@@ -230,7 +242,7 @@ export class ScriptProvider {
                             this._notificationManager.showSuccess(script.name);
                         }
                     } catch (e) {
-                        this._notificationManager.showError(script.name, e);
+                        this._notificationManager.showError(script.name, e as Error);
                     }
                 });
             } else { // status notification
@@ -246,9 +258,9 @@ export class ScriptProvider {
             }
         } catch (e) {
             if (notifyType !== 'none') {
-                this._notificationManager.showError(script.name, e);
+                this._notificationManager.showError(script.name, e as Error);
             }
-            console.error(`Failed to launch script: ${e.message}`);
+            console.error(`Failed to launch script: ${(e as Error).message}`);
         }
 
         // Hide the overview
@@ -256,7 +268,7 @@ export class ScriptProvider {
     }
 
     // Optional method for custom result display
-    createResultObject(meta) {
+    createResultObject(meta: any): any {
         return null; // Use default implementation
     }
 }
