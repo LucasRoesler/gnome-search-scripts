@@ -129,6 +129,13 @@ export class FileManager {
     loadScripts() {
         const scripts = [];
         this._loadScriptsRecursive('', scripts);
+
+        // Log the loaded scripts with detailed information
+        console.log(`Loaded ${scripts.length} scripts`);
+        scripts.forEach(script => {
+            console.log(`- ${script.name} (file: ${script.file}, path: ${script.path}, description: "${script.description}")`);
+        });
+
         return scripts;
     }
 

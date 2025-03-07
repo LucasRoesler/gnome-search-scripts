@@ -79,6 +79,8 @@ A GNOME Shell extension that allows you to execute scripts directly from the GNO
 
    The extension will recursively search all subdirectories for `.sh` files and make them available in search results. When executing scripts in subdirectories, the working directory is set to the script's directory, allowing scripts to use relative paths for resources in the same directory.
 
+   **Note:** If you add or modify scripts in subdirectories, you may need to use the "Refresh Scripts" button in the extension preferences to ensure they are detected.
+
 4. **Notification Types**
    - `status`: Shows success/failure with exit code (default)
    - `stdout`: Shows the script's output in the notification
@@ -92,3 +94,9 @@ A GNOME Shell extension that allows you to execute scripts directly from the GNO
    ```bash
    gnome-extensions prefs gnome-search-scripts@example.com
    ```
+
+   The preferences window allows you to:
+   - Change the scripts directory location
+   - Manually refresh scripts (useful for detecting changes in subdirectories)
+   - Set the default icon for scripts
+   - Configure the default notification style

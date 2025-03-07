@@ -11,6 +11,7 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 const SCRIPT_LOCATION_KEY = 'script-location';
 const DEFAULT_ICON_KEY = 'default-icon';
 const DEFAULT_NOTIFICATION_STYLE_KEY = 'default-notification-style';
+const REFRESH_SCRIPTS_TRIGGER_KEY = 'refresh-scripts-trigger';
 
 export default class ScriptSearchPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -119,6 +120,39 @@ export default class ScriptSearchPreferences extends ExtensionPreferences {
         });
 
         locationGroup.add(locationRow);
+
+        // Create a refresh scripts row
+        const refreshRow = new Adw.ActionRow({
+            title: _('Refresh Scripts'),
+            subtitle: _('Manually reload all scripts from the directory')
+        });
+
+        // Create the refresh button
+        const refreshButton = new Gtk.Button({
+            label: _('Refresh'),
+            valign: Gtk.Align.CENTER
+        });
+
+        refreshRow.add_suffix(refreshButton);
+        locationGroup.add(refreshRow);
+
+        // Connect the button click to trigger refresh
+        refreshButton.connect('clicked', () => {
+            // Increment the counter to trigger a refresh
+            let counter = settings.get_int(REFRESH_SCRIPTS_TRIGGER_KEY);
+            settings.set_int(REFRESH_SCRIPTS_TRIGGER_KEY, counter + 1);
+
+            // Show feedback to the user
+            refreshButton.set_sensitive(false);
+            refreshButton.set_label(_('Refreshing...'));
+
+            // Re-enable after a short delay
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                refreshButton.set_sensitive(true);
+                refreshButton.set_label(_('Refresh'));
+                return GLib.SOURCE_REMOVE;
+            });
+        });
 
         // Create a preferences group for icon settings
         const iconGroup = new Adw.PreferencesGroup({

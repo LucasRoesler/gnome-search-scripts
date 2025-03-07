@@ -37,25 +37,45 @@ export class SearchHandler {
                 reject(new Error('Search cancelled'));
             });
 
-            // Filter scripts based on search terms
+            // Log search operation
             const searchTerm = terms.join(' ').toLowerCase();
-            const results = this._scripts
-                .filter(script => {
-                    // Check if the search term matches the script name or description
-                    const nameMatch = script.name.toLowerCase().includes(searchTerm);
-                    const descriptionMatch = script.description.toLowerCase().includes(searchTerm);
+            console.log(`Searching for: "${searchTerm}"`);
+            console.log(`Total scripts available: ${this._scripts.length}`);
 
-                    // Check if the search term matches part of the directory path
-                    let pathMatch = false;
-                    if (script.path && script.path !== script.file) {
-                        // Extract the directory part of the path
-                        const dirPath = script.path.substring(0, script.path.lastIndexOf('/'));
-                        pathMatch = dirPath.toLowerCase().includes(searchTerm);
-                    }
+            // Debug log all available scripts
+            this._scripts.forEach((script, index) => {
+                console.log(`Script ${index}: ${script.name} (path: ${script.path})`);
+            });
 
-                    return nameMatch || descriptionMatch || pathMatch;
-                })
-                .map((_, index) => index.toString());
+            // Filter scripts and track original indices
+            const matchedScripts = [];
+
+            this._scripts.forEach((script, originalIndex) => {
+                // Check if the search term matches the script name or description
+                const nameMatch = script.name.toLowerCase().includes(searchTerm);
+                const descriptionMatch = script.description.toLowerCase().includes(searchTerm);
+
+                // Check if the search term matches part of the directory path
+                let pathMatch = false;
+                if (script.path && script.path !== script.file) {
+                    // Extract the directory part of the path
+                    const dirPath = script.path.substring(0, script.path.lastIndexOf('/'));
+                    pathMatch = dirPath.toLowerCase().includes(searchTerm);
+                }
+
+                // Log match details for debugging
+                const matches = nameMatch || descriptionMatch || pathMatch;
+                console.log(`Checking "${script.name}": nameMatch=${nameMatch}, descMatch=${descriptionMatch}, pathMatch=${pathMatch}, RESULT=${matches}`);
+
+                if (matches) {
+                    console.log(`Match found: ${script.name} at original index ${originalIndex}`);
+                    matchedScripts.push(originalIndex.toString());
+                }
+            });
+
+            const results = matchedScripts;
+
+            console.log(`Search results: ${results.length} matches found`);
 
             if (cancelId && !cancellable.is_cancelled())
                 cancellable.disconnect(cancelId);
@@ -103,8 +123,20 @@ export class SearchHandler {
                 reject(new Error('Operation cancelled'));
             });
 
+            console.log(`Getting metadata for result IDs: ${resultIds.join(', ')}`);
+
             const metas = resultIds.map(id => {
-                const script = this._scripts[parseInt(id)];
+                const index = parseInt(id);
+                console.log(`Processing result ID ${id} (index ${index})`);
+
+                if (index < 0 || index >= this._scripts.length) {
+                    console.error(`Invalid script index: ${index}, scripts length: ${this._scripts.length}`);
+                    return null;
+                }
+
+                const script = this._scripts[index];
+                console.log(`Found script for ID ${id}: ${script.name}`);
+
                 const scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
 
                 // For scripts in subdirectories, include the path in the description
@@ -130,7 +162,9 @@ export class SearchHandler {
                         });
                     }
                 };
-            });
+            }).filter(meta => meta !== null);
+
+            console.log(`Returning ${metas.length} metadata objects`);
 
             if (cancelId && !cancellable.is_cancelled())
                 cancellable.disconnect(cancelId);

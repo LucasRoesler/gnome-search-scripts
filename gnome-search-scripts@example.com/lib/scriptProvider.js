@@ -37,22 +37,38 @@ export class ScriptProvider {
             this._onScriptsChanged.bind(this)
         );
 
-        // Load scripts
-        this._loadScripts();
+        // Initialize search handler with empty array
+        this._searchHandler = new SearchHandler([]);
 
-        // Initialize search handler
-        this._searchHandler = new SearchHandler(this._scripts);
+        // Load scripts
+        this.refreshScripts(false);
     }
 
     /**
-     * Load scripts from the file manager
+     * Manually refresh all scripts
+     *
+     * @param {boolean} showNotification - Whether to show a notification when done
      */
-    _loadScripts() {
+    refreshScripts(showNotification = true) {
+        console.log('Manually refreshing scripts');
         this._scripts = this._fileManager.loadScripts();
 
-        // Update search handler if it exists
+        // Update search handler
         if (this._searchHandler) {
             this._searchHandler.updateScripts(this._scripts);
+        }
+
+        console.log(`Loaded ${this._scripts.length} scripts`);
+        for (const script of this._scripts) {
+            console.log(`- ${script.name}`);
+        }
+
+        // Show a notification if requested
+        if (showNotification && this._notificationManager) {
+            this._notificationManager.showSuccess(
+                _('Scripts Refreshed'),
+                _('All scripts have been reloaded from disk')
+            );
         }
     }
 
@@ -60,8 +76,7 @@ export class ScriptProvider {
      * Handle script changes
      */
     _onScriptsChanged() {
-        this._scripts = [];
-        this._loadScripts();
+        this.refreshScripts(false);
     }
 
     /**
@@ -72,8 +87,7 @@ export class ScriptProvider {
 
         if (this._fileManager.updateScriptLocation(newLocation)) {
             this._scriptLocation = newLocation;
-            this._scripts = [];
-            this._loadScripts();
+            this.refreshScripts(false);
         }
     }
 
@@ -85,8 +99,7 @@ export class ScriptProvider {
         this._fileManager.updateDefaultIcon(this._defaultIcon);
 
         // Reload scripts to update icons
-        this._scripts = [];
-        this._loadScripts();
+        this.refreshScripts(false);
     }
 
     /**
@@ -97,8 +110,7 @@ export class ScriptProvider {
         this._fileManager.updateDefaultNotificationStyle(this._defaultNotificationStyle);
 
         // Reload scripts to update notification styles
-        this._scripts = [];
-        this._loadScripts();
+        this.refreshScripts(false);
     }
 
     /**
